@@ -12,6 +12,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import ConfigurationError
 
 from core.models import InvalidConfigError, getLogger
+from core.utils import extract_forwarded_content
 
 logger = getLogger(__name__)
 

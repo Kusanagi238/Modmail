@@ -35,6 +35,7 @@ from core.utils import (
     ConfirmThreadCreationView,
     DummyParam,
     extract_forwarded_content,
+    extract_forwarded_attachments,
 )
 
 logger = getLogger(__name__)
@@ -207,7 +208,10 @@ class Thread:
             "messages": [
                 {
                     "author_id": m.author.id,
-                    "content": m.content,
+                    "content": (
+                        (m.content or "")
+                        + (("\n" + extract_forwarded_content(m)) if extract_forwarded_content(m) else "")
+                    ).strip(),
                     "attachments": [a.url for a in m.attachments],
                     "embeds": [e.to_dict() for e in m.embeds],
                     "created_at": m.created_at.isoformat(),
@@ -1997,6 +2001,11 @@ class Thread:
 
         ext = [(a.url, a.filename, False) for a in message.attachments]
 
+        # Add forwarded message attachments
+        forwarded_attachments = extract_forwarded_attachments(message)
+        for url, filename in forwarded_attachments:
+            ext.append((url, filename, False))
+
         images = []
         attachments = []
         for attachment in ext:
@@ -3390,7 +3399,7 @@ class ThreadManager:
                             ctxs = []
                             for al in normalize_alias(alias):
                                 view_ = StringView(self.outer_thread.bot.prefix + al)
-                                synthetic = DummyMessage(copy.copy(message))
+                                synthetic = DummyMessage(copy.copy(self.outer_thread._genesis_message))
                                 try:
                                     synthetic.author = (
                                         self.outer_thread.bot.modmail_guild.me or self.outer_thread.bot.user
